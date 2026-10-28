@@ -1,0 +1,26 @@
+{
+  "name": "speedbench",
+  "version": "1.0.0",
+  "description": "Networking calculator hosted on Cloudflare Pages",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "deploy": "vite build && wrangler pages deploy dist --project-name=speedbench --commit-dirty=true",
+    "pages:dev": "vite build && wrangler pages dev dist"
+  },
+  "dependencies": {
+    "@phosphor-icons/react": "^2.1.10",
+    "framer-motion": "^12.43.0",
+    "leaflet": "^1.9.4",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.4",
+    "prettier": "^3.9.10",
+    "vite": "^6.2.0",
+    "wrangler": "^4.105.0"
+  }
+}
