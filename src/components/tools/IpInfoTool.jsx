@@ -103,11 +103,13 @@ export function IpInfoTool({ myIp }) {
             setIpInput(e.target.value);
           }}
           placeholder="8.8.8.8 or 2001:db8::1…"
-          hint="Dual-stack classification, computed offline"
         />
         <Button type="submit" variant="primary">
           Inspect
         </Button>
+        <p className="text-xs text-(--muted) sm:col-span-2 -mt-2">
+          Dual-stack classification, computed offline
+        </p>
       </form>
 
       <div className="mt-6" aria-live="polite">

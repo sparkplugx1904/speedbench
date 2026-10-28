@@ -59,11 +59,13 @@ export function LocateTool({ presetIp, myIp }) {
           value={ipInput}
           onChange={(e) => setIpInput(e.target.value)}
           placeholder="Enter IP (e.g. 1.1.1.1)…"
-          hint="Uses public free geolocation providers"
         />
         <Button type="submit" variant="primary" disabled={loading}>
           {loading ? "Locating…" : "Locate"}
         </Button>
+        <p className="text-xs text-(--muted) sm:col-span-2 -mt-2">
+          Uses public free geolocation providers
+        </p>
       </form>
 
       <div className="mt-6" aria-live="polite">
