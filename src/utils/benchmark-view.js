@@ -195,7 +195,12 @@ export function sparklineGeometry(values, width = 320, height = 64, floor = 1) {
   const pad = 3;
   const innerWidth = width - pad * 2;
   const innerHeight = height - pad * 2;
-  const maxValue = Math.max(floor, ...values.map((v) => Number(v) || 0));
+  let maxVal = floor;
+  for (let i = 0; i < values.length; i++) {
+    const n = Number(values[i]) || 0;
+    if (n > maxVal) maxVal = n;
+  }
+  const maxValue = maxVal;
 
   const points = values.map((value, index) => {
     const x = values.length === 1 ? pad : pad + (index / (values.length - 1)) * innerWidth;

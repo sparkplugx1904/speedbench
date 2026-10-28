@@ -67,9 +67,12 @@ export function drawBenchChart({
 
   const tStart = samples.length ? samples[0].t : 0;
   const tEnd = samples.length ? samples[samples.length - 1].t : 0;
-  const values = samples.map((sample) => Number(sample[metric.key]) || 0);
-  const maxValue = metric.fixedMax || niceMax(Math.max(10, ...values) * 1.08);
-
+  let maxVal = 10;
+  for (let i = 0; i < samples.length; i++) {
+    const val = Number(samples[i][metric.key]) || 0;
+    if (val > maxVal) maxVal = val;
+  }
+  const maxValue = metric.fixedMax || niceMax(maxVal * 1.08);
   const xOf = (t) =>
     samples.length <= 1 || tEnd === tStart
       ? plotLeft + plotWidth / 2
@@ -119,24 +122,37 @@ export function drawBenchChart({
   ctx.textAlign = 'right';
   ctx.fillText(axisTime(tEnd), plotRight, height - 8);
 
-  // Split the line at gaps (interval mode rest phases) so idle periods are
-  // never drawn as if throughput was measured.
-  const points = samples.map((sample) => ({
-    t: sample.t,
-    x: xOf(sample.t),
-    y: yOf(Number(sample[metric.key]) || 0),
-  }));
+  // Resolution-aware sampling: avoid sub-pixel path overdraw when sample count
+  // exceeds available plot pixels, cutting canvas draw overhead significantly.
+  const maxAllowedPoints = Math.max(200, Math.round(plotWidth * 2));
+  const step = samples.length > maxAllowedPoints ? Math.ceil(samples.length / maxAllowedPoints) : 1;
+
   const segments = [];
   let segment = [];
-  for (const point of points) {
-    if (segment.length && point.t - segment[segment.length - 1].t > 2.5) {
+  for (let i = 0; i < samples.length; i += step) {
+    const sample = samples[i];
+    const point = {
+      t: sample.t,
+      x: xOf(sample.t),
+      y: yOf(Number(sample[metric.key]) || 0),
+    };
+    if (segment.length && point.t - segment[segment.length - 1].t > 2.5 * step) {
       segments.push(segment);
       segment = [];
     }
     segment.push(point);
   }
+  if (step > 1 && samples.length > 0) {
+    const last = samples[samples.length - 1];
+    if (segment.length && segment[segment.length - 1].t !== last.t) {
+      segment.push({
+        t: last.t,
+        x: xOf(last.t),
+        y: yOf(Number(last[metric.key]) || 0),
+      });
+    }
+  }
   if (segment.length) segments.push(segment);
-
   for (const part of segments) {
     if (part.length === 1) {
       ctx.beginPath();

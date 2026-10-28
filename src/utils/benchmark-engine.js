@@ -34,6 +34,7 @@ export class BenchmarkEngine {
     this.streamingActive = false;
     this.streamGeneration = 0;
     this.probeTimer = null;
+    this.probeInFlight = false;
     this.ticker = null;
     this.wakeLock = null;
 
@@ -179,6 +180,7 @@ export class BenchmarkEngine {
     this.stopStreaming();
     clearInterval(this.probeTimer);
     this.probeTimer = null;
+    this.probeInFlight = false;
     this.bytesDownTick = 0;
     this.bytesUpTick = 0;
   }
@@ -276,6 +278,7 @@ export class BenchmarkEngine {
     const ac = new AbortController();
     this.streamControllers[streamIndex] = ac;
 
+    let reader = null;
     try {
       const url = `${this.config.downloadEndpoint}&cacheBust=${Date.now()}_${streamIndex}`;
       const res = await fetch(url, {
@@ -287,7 +290,7 @@ export class BenchmarkEngine {
         throw new Error(`HTTP ${res.status}`);
       }
 
-      const reader = res.body.getReader();
+      reader = res.body.getReader();
       while (
         this.status === 'running' &&
         this.streamingActive &&
@@ -304,13 +307,18 @@ export class BenchmarkEngine {
     } catch {
       // Stream interrupted or error
     } finally {
-      // Loop stream immediately to keep the link saturated
+      if (reader) {
+        try {
+          await reader.cancel();
+        } catch {}
+      }
+      // Loop stream immediately to keep the link saturated without artificial pause
       if (
         this.status === 'running' &&
         this.streamingActive &&
         generation === this.streamGeneration
       ) {
-        setTimeout(() => this.spawnDownloadWorker(streamIndex, generation), 50);
+        setTimeout(() => this.spawnDownloadWorker(streamIndex, generation), 0);
       }
     }
   }
@@ -321,7 +329,8 @@ export class BenchmarkEngine {
   }
 
   async sendProbe() {
-    if (this.status !== 'running') return;
+    if (this.status !== 'running' || this.probeInFlight) return;
+    this.probeInFlight = true;
     const ac = new AbortController();
     const timeoutId = setTimeout(() => ac.abort(), this.config.probeTimeoutMs);
     const start = performance.now();
@@ -332,18 +341,23 @@ export class BenchmarkEngine {
         signal: ac.signal,
         cache: 'no-store',
         mode: 'cors',
-      });
+       });
       clearTimeout(timeoutId);
 
-      const rtt = Math.max(1, performance.now() - start);
-      if (res.ok) {
-        this.recordProbe(rtt, true);
-      } else {
-        this.recordProbe(rtt, false);
+      // Free HTTP/2 stream and socket immediately to avoid socket/stream exhaustion
+      if (res.body) {
+        try {
+          await res.body.cancel();
+        } catch {}
       }
+
+      const rtt = Math.max(1, performance.now() - start);
+      this.recordProbe(rtt, res.ok);
     } catch {
       clearTimeout(timeoutId);
       this.recordProbe(this.config.probeTimeoutMs, false);
+    } finally {
+      this.probeInFlight = false;
     }
   }
 

@@ -15,10 +15,10 @@ export const DEFAULT_CONFIG = {
 
   // Streaming & measurement tuning
   parallelStreams: 4,
-  probeIntervalMs: 250, // 4 probes per second
+  probeIntervalMs: 500, // 2 probes per second (reduces stream congestion and rate-limiting)
   probeTimeoutMs: 2000, // 2s without response = lost probe
   sampleIntervalMs: 1000, // 1 sample per second
-  rollingWindowLossProbes: 20, // last 20 probes (5s) for loss rate
+  rollingWindowLossProbes: 10, // last 10 probes (5s) for loss rate
 
   // Memory bounds (Ring buffer)
   maxSamples: 3600, // 1 hour at 1 Hz resolution
