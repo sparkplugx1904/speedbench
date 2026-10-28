@@ -21,9 +21,9 @@
 | **Subnet**     | Network, broadcast, host range, dan wildcard dari IP + mask                          |
 | **Membership** | Cek apakah sebuah IP berada dalam CIDR tertentu                                      |
 | **Masks**      | Konversi prefix ⇄ dotted mask, atau hitung prefix dari jumlah host                   |
-| **IP info**    | Klasifikasi alamat: kind/class, binary, integer, hex                                 |
+| **IP info**    | Klasifikasi alamat **IPv4 & IPv6**: kind/type, class, binary, integer, hex           |
 | **Split**      | Pecah parent CIDR menjadi child subnets yang sama besar                              |
-| **Locate**     | Lihat IP publik di peta (Leaflet + CARTO), lookup via API geo gratis                 |
+| **Locate**     | Peta lokasi IP publik (Leaflet + CARTO): kota, region, kode pos, time zone, ISP, ASN |
 | **About**      | Kredits, arsitektur, dan catatan privasi                                             |
 
 Seluruh kalkulasi IPv4 dieksekusi **lokal via operasi bitwise JavaScript** — tetap

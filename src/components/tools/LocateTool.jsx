@@ -1,22 +1,33 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { MapPin } from '@phosphor-icons/react';
-import { Card } from '../ui/Card';
-import { Input } from '../ui/Input';
-import { Button } from '../ui/Button';
-import { DataList } from '../ui/DataList';
-import { ResultBox } from '../ui/ResultBox';
-import { lookupIpLocation } from '../../utils/geo-api';
-import { LeafletMap } from './LeafletMap';
+import React, { useState, useEffect, useCallback } from "react";
+import { MapPin } from "@phosphor-icons/react";
+import { Card } from "../ui/Card";
+import { Input } from "../ui/Input";
+import { Button } from "../ui/Button";
+import { DataList } from "../ui/DataList";
+import { ResultBox } from "../ui/ResultBox";
+import {
+  lookupIpLocation,
+  formatUtcOffset,
+  utcOffsetFromZone,
+} from "../../utils/geo-api";
+import { LeafletMap } from "./LeafletMap";
+
+function timeZoneValue(primary) {
+  const utc =
+    formatUtcOffset(primary.utcOffset) || utcOffsetFromZone(primary.timezone);
+  if (utc && primary.timezone) return `${utc} (${primary.timezone})`;
+  return utc || primary.timezone || "n/a";
+}
 
 export function LocateTool({ presetIp, myIp }) {
-  const initialIp = presetIp || myIp || '';
+  const initialIp = presetIp || myIp || "";
   const [ipInput, setIpInput] = useState(initialIp);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [result, setResult] = useState(null);
 
   const doLookup = useCallback(async (ipToSearch) => {
-    const target = (ipToSearch || '').trim();
+    const target = (ipToSearch || "").trim();
     if (!target) return;
     setLoading(true);
     setError(null);
@@ -24,7 +35,7 @@ export function LocateTool({ presetIp, myIp }) {
       const data = await lookupIpLocation(target);
       setResult(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Lookup failed.');
+      setError(err instanceof Error ? err.message : "Lookup failed.");
       setResult(null);
     } finally {
       setLoading(false);
@@ -48,7 +59,10 @@ export function LocateTool({ presetIp, myIp }) {
 
   return (
     <Card>
-      <form onSubmit={handleSubmit} className="grid gap-4 sm:grid-cols-[1fr_auto] sm:items-end">
+      <form
+        onSubmit={handleSubmit}
+        className="grid gap-4 sm:grid-cols-[1fr_auto] sm:items-end"
+      >
         <Input
           id="locate-ip"
           name="ip"
@@ -59,7 +73,7 @@ export function LocateTool({ presetIp, myIp }) {
           hint="Uses public free geolocation providers"
         />
         <Button type="submit" variant="primary" disabled={loading}>
-          {loading ? 'Locating…' : 'Locate'}
+          {loading ? "Locating…" : "Locate"}
         </Button>
       </form>
 
@@ -86,24 +100,40 @@ export function LocateTool({ presetIp, myIp }) {
 
               <DataList
                 rows={[
-                  { label: 'IP', value: result.primary.ip, mono: true, emphasize: true },
                   {
-                    label: 'Location',
-                    value:
-                      [result.primary.city, result.primary.region, result.primary.country]
-                        .filter(Boolean)
-                        .join(', ') || 'Unknown',
+                    label: "IP",
+                    value: result.primary.ip,
+                    mono: true,
+                    emphasize: true,
+                  },
+                  { label: "City", value: result.primary.city || "n/a" },
+                  {
+                    label: "State/Region",
+                    value: result.primary.region || "n/a",
+                  },
+                  { label: "Country", value: result.primary.country || "n/a" },
+                  {
+                    label: "Postal code",
+                    value: result.primary.postal || "n/a",
                   },
                   {
-                    label: 'Coordinates',
+                    label: "Coordinates",
                     value: `${result.primary.lat.toFixed(4)}, ${result.primary.lon.toFixed(4)}`,
                     mono: true,
                   },
-                  { label: 'Organization', value: result.primary.org || 'n/a' },
-                  { label: 'ISP', value: result.primary.isp || 'n/a' },
-                  { label: 'ASN', value: result.primary.asn || 'n/a' },
-                  { label: 'Timezone', value: result.primary.timezone || 'n/a' },
-                  { label: 'Source database', value: result.primary.source },
+                  { label: "Time zone", value: timeZoneValue(result.primary) },
+                  {
+                    label: "ISP",
+                    value: result.primary.isp || result.primary.org || "n/a",
+                  },
+                  {
+                    label: "ASN",
+                    value: result.primary.asn
+                      ? `AS${result.primary.asn}`
+                      : "n/a",
+                    mono: true,
+                  },
+                  { label: "Source database", value: result.primary.source },
                 ]}
               />
 
@@ -121,7 +151,9 @@ export function LocateTool({ presetIp, myIp }) {
 
             {result.sources.length > 1 && (
               <div>
-                <p className="toolkit-result-note mb-2">All provider responses:</p>
+                <p className="toolkit-result-note mb-2">
+                  All provider responses:
+                </p>
                 <div className="toolkit-table-wrap">
                   <table className="toolkit-table w-full text-left text-xs">
                     <thead>
@@ -138,13 +170,15 @@ export function LocateTool({ presetIp, myIp }) {
                         <tr
                           key={s.source}
                           className={
-                            s.source === result.primary.source ? 'bg-(--surface-raised)' : ''
+                            s.source === result.primary.source
+                              ? "bg-(--surface-raised)"
+                              : ""
                           }
                         >
                           <td className="px-3 py-2 font-medium">{s.source}</td>
-                          <td className="px-3 py-2">{s.city || '—'}</td>
-                          <td className="px-3 py-2">{s.region || '—'}</td>
-                          <td className="px-3 py-2">{s.country || '—'}</td>
+                          <td className="px-3 py-2">{s.city || "—"}</td>
+                          <td className="px-3 py-2">{s.region || "—"}</td>
+                          <td className="px-3 py-2">{s.country || "—"}</td>
                           <td className="is-mono px-3 py-2">
                             {s.lat.toFixed(4)}, {s.lon.toFixed(4)}
                           </td>
