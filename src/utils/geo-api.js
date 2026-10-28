@@ -1,4 +1,5 @@
 import { parseIpv4, classifyIp } from "./ip-math";
+import { parseIpv6, classifyIpv6 } from "./ipv6-math";
 
 export function haversineDistance(coord1, coord2) {
   const toRad = (deg) => (deg * Math.PI) / 180;
@@ -59,6 +60,51 @@ export function validatePublicIpForGeo(ipStr) {
   if (c.broadcast || c.ip === "0.0.0.0")
     return "This address cannot be geolocated.";
   return null;
+}
+
+export function validatePublicIpv6ForGeo(ipStr) {
+  const parsed = parseIpv6(ipStr);
+  if (!parsed.ok) return parsed.error;
+  const c = classifyIpv6(parsed.value);
+  if (c.globalUnicast) return null;
+  if (c.loopback) return "Loopback addresses are local to this machine.";
+  if (c.multicast)
+    return "Multicast addresses have no single geographic location.";
+  if (c.private)
+    return "ULA/link-local IPv6 addresses are not globally routable.";
+  if (c.transition) {
+    return "Transition address — inspect its embedded IPv4 for a real location.";
+  }
+  return "This IPv6 address is not a routable global unicast address.";
+}
+
+/** Validate either stack for geo lookup; returns an error message or null. */
+export function validateAnyIpForGeo(ipStr) {
+  return (ipStr ?? "").includes(":")
+    ? validatePublicIpv6ForGeo(ipStr)
+    : validatePublicIpForGeo(ipStr);
+}
+
+/** Prefer the most complete ISP string available from a source. */
+export function richIsp(info) {
+  if (!info) return null;
+  if (
+    info.isp &&
+    info.org &&
+    info.org.includes(info.isp) &&
+    info.org.length > info.isp.length
+  ) {
+    return info.org;
+  }
+  return info.isp || info.org || null;
+}
+
+/** "UTC +08:00 (Asia/Makassar)" from a provider's offset and/or zone name. */
+export function timeZoneValue(primary) {
+  const utc =
+    formatUtcOffset(primary.utcOffset) || utcOffsetFromZone(primary.timezone);
+  if (utc && primary.timezone) return `${utc} (${primary.timezone})`;
+  return utc || primary.timezone || "n/a";
 }
 
 export async function fetchGeoFromGeoJs(ip) {
@@ -176,7 +222,7 @@ export async function fetchGeoFromIpApi(ip) {
 
 export function pickBestGeoSource(sources) {
   if (sources.length === 1) return sources[0];
-  const order = ["ipwho.is", "ipapi.co", "geojs.io"];
+  const order = ["ipapi.co", "ipwho.is", "geojs.io"];
   const clusters = new Map();
 
   for (const s of sources) {
@@ -233,9 +279,18 @@ export function hasLocationDisagreement(sources) {
   return false;
 }
 
+/** The most complete ISP-style string across all sources (containment chain). */
+function richestIspAcross(sources) {
+  const candidates = sources.flatMap((s) => [s.isp, s.org]).filter(Boolean);
+  if (candidates.length === 0) return null;
+  return candidates.reduce((a, b) =>
+    b.includes(a) && b.length > a.length ? b : a,
+  );
+}
+
 export async function lookupIpLocation(rawIp) {
   const ip = rawIp.trim();
-  const validationError = validatePublicIpForGeo(ip);
+  const validationError = validateAnyIpForGeo(ip);
   if (validationError) throw new Error(validationError);
 
   const results = await Promise.allSettled([
@@ -266,6 +321,7 @@ export async function lookupIpLocation(rawIp) {
       primary.utcOffset ??
       sources.map((s) => s.utcOffset).find(Boolean) ??
       null,
+    isp: richestIspAcross(sources) ?? primary.isp ?? primary.org ?? null,
   };
   const disagree = hasLocationDisagreement(sources);
   const cgnatHint =

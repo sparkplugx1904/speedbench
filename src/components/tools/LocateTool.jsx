@@ -5,19 +5,8 @@ import { Input } from "../ui/Input";
 import { Button } from "../ui/Button";
 import { DataList } from "../ui/DataList";
 import { ResultBox } from "../ui/ResultBox";
-import {
-  lookupIpLocation,
-  formatUtcOffset,
-  utcOffsetFromZone,
-} from "../../utils/geo-api";
+import { lookupIpLocation, timeZoneValue, richIsp } from "../../utils/geo-api";
 import { LeafletMap } from "./LeafletMap";
-
-function timeZoneValue(primary) {
-  const utc =
-    formatUtcOffset(primary.utcOffset) || utcOffsetFromZone(primary.timezone);
-  if (utc && primary.timezone) return `${utc} (${primary.timezone})`;
-  return utc || primary.timezone || "n/a";
-}
 
 export function LocateTool({ presetIp, myIp }) {
   const initialIp = presetIp || myIp || "";
@@ -124,7 +113,7 @@ export function LocateTool({ presetIp, myIp }) {
                   { label: "Time zone", value: timeZoneValue(result.primary) },
                   {
                     label: "ISP",
-                    value: result.primary.isp || result.primary.org || "n/a",
+                    value: richIsp(result.primary) || "n/a",
                   },
                   {
                     label: "ASN",

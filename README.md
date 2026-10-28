@@ -21,7 +21,7 @@
 | **Subnet**     | Network, broadcast, host range, dan wildcard dari IP + mask                          |
 | **Membership** | Cek apakah sebuah IP berada dalam CIDR tertentu                                      |
 | **Masks**      | Konversi prefix ⇄ dotted mask, atau hitung prefix dari jumlah host                   |
-| **IP info**    | Klasifikasi alamat **IPv4 & IPv6**: kind/type, class, binary, integer, hex           |
+| **IP info**    | Klasifikasi **IPv4 & IPv6** offline + panel geo/ISP untuk IP publik                  |
 | **Split**      | Pecah parent CIDR menjadi child subnets yang sama besar                              |
 | **Locate**     | Peta lokasi IP publik (Leaflet + CARTO): kota, region, kode pos, time zone, ISP, ASN |
 | **About**      | Kredits, arsitektur, dan catatan privasi                                             |
@@ -120,7 +120,7 @@ speedbench/
 - Kalkulasi jaringan: **offline, di browser**.
 - Tanpa telemetry, analytics, tracker, atau request latar belakang.
 - Sesi benchmark hanya tersimpan di `localStorage` perangkat sendiri.
-- Andalkan endpoint publik hanya pada dua tool: **Locate** dan **Benchmark**.
+- Andalkan endpoint publik hanya pada tiga tool: **Locate**, **Benchmark**, dan panel geo **IP info** (IP publik).
 
 ## Credits & Attribution
 
