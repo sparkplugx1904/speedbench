@@ -111,12 +111,10 @@ export function AboutTool() {
             a server.
           </li>
           <li>
-            Only three features touch the network:{" "}
+            Only two features touch the network:{" "}
             <strong className="text-(--ink)">Locate</strong> (public geolocation
-            APIs), <strong className="text-(--ink)">Benchmark</strong>{" "}
-            (Cloudflare's public speed endpoint), and{" "}
-            <strong className="text-(--ink)">IP info</strong>'s geo panel for
-            public addresses. Everything else stays local.
+            APIs) and <strong className="text-(--ink)">Benchmark</strong>{" "}
+            (Cloudflare's public speed endpoint). Everything else stays local.
           </li>
           <li>
             No telemetry, no analytics, no trackers, no background requests

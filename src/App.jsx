@@ -63,8 +63,8 @@ const TOOLS = [
     label: "IP info",
     icon: Info,
     eyebrow: "IPv4 & IPv6",
-    chip: "offline + geo",
-    desc: "Classify IPv4 or IPv6 offline, plus city/ISP data for public IPs.",
+    chip: "100% offline",
+    desc: "Classify IPv4 or IPv6: kind, type, binary, and integer forms.",
   },
   {
     id: "split",

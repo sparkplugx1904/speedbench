@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef } from "react";
-import { Info, MapPin } from "@phosphor-icons/react";
+import { Info } from "@phosphor-icons/react";
 import { Card } from "../ui/Card";
 import { Input } from "../ui/Input";
 import { Button } from "../ui/Button";
@@ -7,12 +7,6 @@ import { DataList } from "../ui/DataList";
 import { ResultBox } from "../ui/ResultBox";
 import { parseIpv4, classifyIp, formatNumber } from "../../utils/ip-math";
 import { parseIpv6, classifyIpv6 } from "../../utils/ipv6-math";
-import {
-  lookupIpLocation,
-  validateAnyIpForGeo,
-  timeZoneValue,
-  richIsp,
-} from "../../utils/geo-api";
 
 const DEFAULT_EXAMPLE = "8.8.8.8";
 
@@ -64,9 +58,6 @@ export function IpInfoTool({ myIp }) {
   const [ipInput, setIpInput] = useState(DEFAULT_EXAMPLE);
   const [activeQuery, setActiveQuery] = useState(DEFAULT_EXAMPLE);
   const userEditedRef = useRef(false);
-  const [geo, setGeo] = useState(null);
-  const [geoLoading, setGeoLoading] = useState(false);
-  const [geoError, setGeoError] = useState(null);
 
   // Prefill with the detected public IP until the user types their own.
   useEffect(() => {
@@ -91,40 +82,6 @@ export function IpInfoTool({ myIp }) {
     return { error: null, rows: buildIpv4Rows(classifyIp(parsed.value)) };
   }, [activeQuery]);
 
-  // Public, globally routable addresses get a geolocation panel.
-  const geoTarget = useMemo(() => {
-    const query = activeQuery.trim();
-    if (!query || result.error || !result.rows) return null;
-    return validateAnyIpForGeo(query) ? null : query;
-  }, [activeQuery, result]);
-
-  useEffect(() => {
-    if (!geoTarget) {
-      setGeo(null);
-      setGeoError(null);
-      setGeoLoading(false);
-      return;
-    }
-    let cancelled = false;
-    setGeoLoading(true);
-    setGeoError(null);
-    setGeo(null);
-    lookupIpLocation(geoTarget)
-      .then((data) => {
-        if (!cancelled) setGeo(data);
-      })
-      .catch((err) => {
-        if (!cancelled)
-          setGeoError(err instanceof Error ? err.message : "Lookup failed.");
-      })
-      .finally(() => {
-        if (!cancelled) setGeoLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [geoTarget]);
-
   const handleSubmit = (e) => {
     e.preventDefault();
     setActiveQuery(ipInput);
@@ -146,7 +103,7 @@ export function IpInfoTool({ myIp }) {
             setIpInput(e.target.value);
           }}
           placeholder="8.8.8.8 or 2001:db8::1…"
-          hint="Classification is offline; public IPs also get a geo panel"
+          hint="Dual-stack classification, computed offline"
         />
         <Button type="submit" variant="primary">
           Inspect
@@ -163,43 +120,6 @@ export function IpInfoTool({ myIp }) {
             badgeTone="accent"
           >
             <DataList rows={result.rows} />
-          </ResultBox>
-        )}
-
-        {geoLoading && (
-          <p className="toolkit-notice mt-4">Fetching geolocation data…</p>
-        )}
-        {geoError && (
-          <p className="toolkit-error mt-4">Geo lookup failed: {geoError}</p>
-        )}
-        {geo && (
-          <ResultBox
-            icon={<MapPin size={16} weight="bold" />}
-            title="Geolocation & network"
-            badge={geo.primary.ip}
-            badgeTone="accent"
-          >
-            <DataList
-              rows={[
-                { label: "City", value: geo.primary.city || "n/a" },
-                { label: "State/Region", value: geo.primary.region || "n/a" },
-                { label: "Country", value: geo.primary.country || "n/a" },
-                { label: "Postal code", value: geo.primary.postal || "n/a" },
-                {
-                  label: "Coordinates",
-                  value: `${geo.primary.lat.toFixed(4)}, ${geo.primary.lon.toFixed(4)}`,
-                  mono: true,
-                },
-                { label: "Time zone", value: timeZoneValue(geo.primary) },
-                { label: "ISP", value: richIsp(geo.primary) || "n/a" },
-                {
-                  label: "ASN",
-                  value: geo.primary.asn ? `AS${geo.primary.asn}` : "n/a",
-                  mono: true,
-                },
-                { label: "Source database", value: geo.primary.source },
-              ]}
-            />
           </ResultBox>
         )}
       </div>
