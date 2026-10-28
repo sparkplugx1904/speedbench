@@ -1,0 +1,470 @@
+/* SpeedBench toolkit — scoped styles for the IPv4 tools, Locate, About and
+   app-level chrome. Adds hierarchy and rhythm without touching the precompiled
+   utility stylesheet in public/assets/style.css. Every boxed surface is square
+   (border-radius: 0) to match the benchmark instrument. */
+
+.app-layout-wrapper {
+  --toolkit-line: color-mix(in oklab, var(--border) 82%, transparent);
+  --toolkit-line-soft: color-mix(in oklab, var(--border) 48%, transparent);
+  --toolkit-wash: color-mix(in oklab, var(--ink) 3.5%, transparent);
+  --toolkit-hover: color-mix(in oklab, var(--ink) 2.5%, transparent);
+}
+
+/* ------------------------------------------------------------------ header */
+
+.toolkit-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 13px;
+}
+
+.toolkit-head-icon {
+  display: grid;
+  flex: none;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border: 1px solid var(--toolkit-line);
+  background: var(--surface-raised);
+  color: var(--accent);
+}
+
+.toolkit-eyebrow {
+  display: block;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+.toolkit-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.toolkit-chips span,
+.toolkit-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border: 1px solid var(--toolkit-line);
+  background: var(--toolkit-wash);
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 0.63rem;
+  line-height: 1.4;
+}
+
+.toolkit-chip {
+  color: var(--ink);
+  text-decoration: none;
+  transition: background-color 0.15s ease;
+}
+
+.toolkit-chip:hover {
+  background: var(--hover);
+}
+
+/* ------------------------------------------------------------------- nav */
+
+.toolkit-nav-icon {
+  display: inline-grid;
+  flex: none;
+  width: 22px;
+  height: 22px;
+  place-items: center;
+  border: 1px solid currentColor;
+  opacity: 0.9;
+}
+
+li > .toolkit-nav-btn[aria-current='page'] > .toolkit-nav-icon {
+  opacity: 1;
+}
+
+/* Horizontal tool rail on small screens uses a hairline accent scrollbar
+   instead of the platform's chunky scrollbar. */
+.toolkit-nav {
+  scrollbar-width: thin;
+  scrollbar-color: var(--accent) transparent;
+}
+
+.toolkit-nav::-webkit-scrollbar {
+  height: 2px;
+  width: 2px;
+}
+
+.toolkit-nav::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.toolkit-nav::-webkit-scrollbar-thumb {
+  background: var(--accent);
+  border-radius: 0;
+}
+
+/* ------------------------------------------------------------------ result */
+
+.toolkit-result {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 13px;
+  padding: 14px 16px 16px;
+  border: 1px solid var(--toolkit-line);
+  background: var(--surface-raised);
+}
+
+.toolkit-result-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--toolkit-line-soft);
+}
+
+.toolkit-result-icon {
+  display: grid;
+  flex: none;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  border: 1px solid var(--toolkit-line);
+  background: var(--toolkit-wash);
+  color: var(--accent);
+}
+
+.toolkit-result-icon > svg {
+  width: 16px;
+  height: 16px;
+}
+
+.toolkit-result-title {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.toolkit-badge {
+  min-width: 0;
+  margin-left: auto;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  padding: 3px 9px;
+  border: 1px solid var(--toolkit-line);
+  background: var(--toolkit-wash);
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: 0.76rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.toolkit-badge--accent {
+  border-color: color-mix(in oklab, var(--accent) 30%, transparent);
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.toolkit-badge--ok {
+  border-color: color-mix(in oklab, var(--success) 30%, transparent);
+  background: var(--success-bg);
+  color: var(--success);
+}
+
+.toolkit-badge--bad {
+  border-color: color-mix(in oklab, var(--danger) 30%, transparent);
+  background: var(--danger-bg);
+  color: var(--danger);
+}
+
+.toolkit-result-note {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.76rem;
+  line-height: 1.5;
+}
+
+/* ---------------------------------------------------------------- datalist */
+
+.toolkit-datalist {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  margin: 0;
+  border: 1px solid var(--toolkit-line);
+}
+
+.toolkit-row {
+  display: grid;
+  grid-template-columns: minmax(7.5rem, 0.32fr) 1fr;
+  gap: 8px 16px;
+  padding: 8px 12px;
+  border-bottom: 1px dashed var(--toolkit-line-soft);
+  transition: background-color 0.12s ease;
+}
+
+.toolkit-row:last-child {
+  border-bottom: 0;
+}
+
+.toolkit-row:hover {
+  background: var(--toolkit-hover);
+}
+
+.toolkit-row dt {
+  padding-top: 2px;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  line-height: 1.6;
+  text-transform: uppercase;
+}
+
+.toolkit-row dd {
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: var(--ink);
+  font-size: 0.88rem;
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+.toolkit-row dd.is-mono {
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  font-weight: 400;
+}
+
+.toolkit-row dd.is-hero {
+  color: var(--accent);
+  font-size: 1.02rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+/* ------------------------------------------------------------------ errors */
+
+.toolkit-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  margin: 0;
+  padding: 9px 12px;
+  border: 1px solid color-mix(in oklab, var(--danger) 26%, transparent);
+  background: var(--danger-bg);
+  color: var(--danger);
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
+/* ------------------------------------------------------------------ verdict */
+
+.toolkit-verdict {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 11px 13px;
+  border: 1px solid transparent;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.toolkit-verdict--ok {
+  border-color: color-mix(in oklab, var(--success) 28%, transparent);
+  background: var(--success-bg);
+  color: var(--success);
+}
+
+.toolkit-verdict--bad {
+  border-color: color-mix(in oklab, var(--danger) 28%, transparent);
+  background: var(--danger-bg);
+  color: var(--danger);
+}
+
+.toolkit-verdict-icon {
+  display: grid;
+  flex: none;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  border: 1px solid currentColor;
+  background: color-mix(in oklab, var(--surface-raised) 60%, transparent);
+}
+
+/* ------------------------------------------------------------------- tabs */
+
+.toolkit-tabs {
+  display: inline-flex;
+  max-width: 100%;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid var(--toolkit-line);
+  background: var(--surface);
+}
+
+.toolkit-tab {
+  min-height: 30px;
+  padding: 4px 13px;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-family: var(--font-sans);
+  font-size: 0.83rem;
+  font-weight: 500;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.toolkit-tab:hover {
+  color: var(--ink);
+  background: var(--toolkit-hover);
+}
+
+.toolkit-tab[aria-selected='true'] {
+  background: var(--accent);
+  color: var(--btn-primary-text);
+}
+
+/* ------------------------------------------------------------------- table */
+
+.toolkit-table-wrap {
+  min-width: 0;
+  overflow-x: auto;
+  border: 1px solid var(--toolkit-line);
+  background: var(--surface-raised);
+}
+
+.toolkit-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+
+.toolkit-table thead th {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--toolkit-line);
+  background: color-mix(in oklab, var(--ink) 3.5%, var(--surface-raised));
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 0.64rem;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-align: left;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.toolkit-table tbody td {
+  padding: 7px 12px;
+  border-bottom: 1px dashed var(--toolkit-line-soft);
+  vertical-align: top;
+}
+
+.toolkit-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.toolkit-table tbody tr:hover {
+  background: var(--toolkit-hover);
+}
+
+.toolkit-table .is-mono {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+}
+
+/* ------------------------------------------------------------------ notice */
+
+.toolkit-notice {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 9px 12px;
+  border: 1px solid color-mix(in oklab, var(--accent) 22%, var(--toolkit-line));
+  background: var(--toolkit-wash);
+  color: var(--muted);
+  font-size: 0.74rem;
+  line-height: 1.55;
+}
+
+/* ------------------------------------------------------------------- about */
+
+.toolkit-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0 0 0 18px;
+  list-style: none;
+}
+
+.toolkit-list li {
+  position: relative;
+}
+
+.toolkit-list li::before {
+  content: '';
+  position: absolute;
+  top: 0.48em;
+  left: -18px;
+  width: 7px;
+  height: 7px;
+  background: var(--accent);
+}
+
+.toolkit-facts {
+  display: grid;
+  gap: 5px;
+  padding: 11px 13px;
+  border: 1px dashed var(--toolkit-line);
+  background: var(--toolkit-wash);
+}
+
+/* ---------------------------------------------------------------- ip chip */
+
+.toolkit-ipchip {
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  padding: 2px 8px;
+  border: 1px solid var(--toolkit-line);
+  background: var(--surface-raised);
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* -------------------------------------------------------------- responsive */
+
+@media (max-width: 520px) {
+  .toolkit-row {
+    grid-template-columns: 1fr;
+    gap: 3px;
+  }
+
+  .toolkit-row dd {
+    font-size: 0.9rem;
+  }
+
+  .toolkit-badge {
+    width: 100%;
+    margin-left: 0;
+  }
+}
