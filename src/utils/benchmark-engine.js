@@ -1,8 +1,14 @@
 import { DEFAULT_CONFIG } from './benchmark-config';
 import { analyzeBurst } from './benchmark-analysis';
 import { buildBenchmarkCsv, buildBenchmarkJson } from './benchmark-export';
-import { formatElapsed } from './benchmark-format';
+import { formatElapsed, formatBytes } from './benchmark-format';
 import { buildSnapshot } from './benchmark-snapshot';
+import { createEventEntry } from './benchmark-events';
+import {
+  spawnDownloadStream,
+  spawnUploadStream,
+  sendLatencyProbe,
+} from './benchmark-streams';
 import {
   clearSession,
   hasStoredSession as hasSession,
@@ -28,6 +34,8 @@ export class BenchmarkEngine {
 
     this.probeHistory = []; // Last N probes: { rtt: number, ok: boolean, ts: number }
     this.lastRtt = null;
+    this.lastSpikeLogTime = 0;
+    this.lastLossLogTime = 0;
     this.elapsedSeconds = 0;
 
     this.streamControllers = [];
@@ -38,11 +46,9 @@ export class BenchmarkEngine {
     this.ticker = null;
     this.wakeLock = null;
 
-    // Interval mode state
     this.intervalPhase = null; // 'active' | 'rest' | null
     this.intervalPhaseElapsed = 0;
 
-    // Burst analysis
     this.burstSpeed = null;
     this.sustainedSpeed = null;
     this.stepDownReport = null;
@@ -77,16 +83,10 @@ export class BenchmarkEngine {
     this.callbacks.forEach((cb) => cb(snapshot));
   }
 
-  logEvent(type, message) {
-    const entry = {
-      id: Math.random().toString(36).substring(2, 9),
-      ts: new Date().toISOString(),
-      timeFormatted: formatElapsed(this.elapsedSeconds),
-      type, // 'info' | 'warn' | 'error' | 'drop'
-      message,
-    };
+  logEvent(type, message, extra = {}) {
+    const entry = createEventEntry(this, type, message, extra);
     this.events.unshift(entry);
-    if (this.events.length > 100) this.events.pop();
+    if (this.events.length > 150) this.events.pop();
     this.emit();
   }
 
@@ -114,28 +114,36 @@ export class BenchmarkEngine {
   }
 
   handleOnline() {
-    if (this.status !== 'offline') return;
-    this.status = 'running';
-    this.acquireWakeLock();
-    this.logEvent('info', 'Network connection restored. Benchmark resumed.');
-    if (this.mode === 'interval') {
-      this.beginIntervalPhase('active');
-    } else {
-      this.beginMeasurements();
+    if (this.status === 'offline') {
+      this.status = 'running';
+      this.acquireWakeLock();
+      this.logEvent('info', 'Network connection restored. Benchmark resumed.', {
+        reason: 'online',
+      });
+      if (this.mode === 'interval') {
+        this.beginIntervalPhase('active');
+      } else {
+        this.beginMeasurements();
+      }
+      this.ticker = setInterval(() => this.tick(), 1000);
+      this.emit();
     }
-    this.ticker = setInterval(() => this.tick(), 1000);
-    this.emit();
   }
 
   handleOffline() {
-    if (this.status !== 'running') return;
-    this.status = 'offline';
-    this.endMeasurements();
-    this.releaseWakeLock();
-    clearInterval(this.ticker);
-    this.ticker = null;
-    this.logEvent('error', 'Network outage detected: device is offline. Measurement paused.');
-    this.emit();
+    if (this.status === 'running') {
+      this.status = 'offline';
+      this.endMeasurements();
+      this.releaseWakeLock();
+      clearInterval(this.ticker);
+      this.ticker = null;
+      this.logEvent(
+        'error',
+        'Network outage detected: device is offline. Measurement paused.',
+        { reason: 'offline' }
+      );
+      this.emit();
+    }
   }
 
   start() {
@@ -150,13 +158,23 @@ export class BenchmarkEngine {
       window.addEventListener('offline', this.handleOffline);
     }
 
+    const startExtra = {
+      action: wasPaused ? 'resume' : 'start',
+      mode: this.mode,
+      streams: `${this.config.parallelStreams} DL / 2 UL`,
+      dataCap: this.dataCapMB > 0 ? `${this.dataCapMB} MB` : 'Unlimited',
+      targetServer: 'speed.cloudflare.com',
+      connType: this.testConditions?.connectionType || undefined,
+    };
+
     this.logEvent(
       'info',
       wasPaused
         ? 'Benchmark resumed by user.'
         : this.samples.length > 0
-          ? 'Benchmark resumed with the existing session samples.'
-          : `Benchmark started in ${this.mode} mode (${this.config.parallelStreams} streams).`,
+          ? 'Benchmark resumed with existing session samples.'
+          : `Benchmark started in ${this.mode} mode (${this.config.parallelStreams} DL + 2 UL streams).`,
+      startExtra,
     );
 
     if (this.mode === 'interval') {
@@ -189,8 +207,14 @@ export class BenchmarkEngine {
     this.intervalPhase = phase;
     this.intervalPhaseElapsed = 0;
     if (phase === 'active') {
+      this.logEvent('info', `Interval: started active test burst (${this.config.intervalBurstDurationSec}s).`, {
+        phase: 'burst',
+      });
       this.beginMeasurements();
     } else {
+      this.logEvent('info', `Interval: entered rest phase (${this.config.intervalPauseDurationSec}s). Sparing data.`, {
+        phase: 'rest',
+      });
       this.endMeasurements();
     }
   }
@@ -204,7 +228,7 @@ export class BenchmarkEngine {
     this.releaseWakeLock();
     clearInterval(this.ticker);
     this.ticker = null;
-    this.logEvent('info', 'Benchmark paused by user.');
+    this.logEvent('info', 'Benchmark paused by user.', { action: 'pause' });
     this.emit();
   }
 
@@ -225,7 +249,16 @@ export class BenchmarkEngine {
     }
 
     if (wasActive) {
-      this.logEvent('info', 'Benchmark stopped.');
+      const totalBytes = this.bytesDownTotal + this.bytesUpTotal;
+      this.logEvent(
+        'info',
+        `Benchmark stopped. Transferred ${formatBytes(totalBytes)} over ${formatElapsed(this.elapsedSeconds)}.`,
+        {
+          action: 'stop',
+          duration: formatElapsed(this.elapsedSeconds),
+          dataUsed: formatBytes(totalBytes),
+        },
+      );
     }
     this.saveToStorage();
     this.emit();
@@ -252,7 +285,10 @@ export class BenchmarkEngine {
     this.streamingActive = true;
     const generation = ++this.streamGeneration;
     for (let i = 0; i < this.config.parallelStreams; i++) {
-      this.spawnDownloadWorker(i, generation);
+      spawnDownloadStream(this, i, generation);
+    }
+    for (let i = 0; i < 2; i++) {
+      spawnUploadStream(this, i, generation);
     }
   }
 
@@ -267,98 +303,9 @@ export class BenchmarkEngine {
     this.streamControllers = [];
   }
 
-  async spawnDownloadWorker(streamIndex, generation) {
-    if (
-      this.status !== 'running' ||
-      !this.streamingActive ||
-      generation !== this.streamGeneration
-    ) {
-      return;
-    }
-    const ac = new AbortController();
-    this.streamControllers[streamIndex] = ac;
-
-    let reader = null;
-    try {
-      const url = `${this.config.downloadEndpoint}&cacheBust=${Date.now()}_${streamIndex}`;
-      const res = await fetch(url, {
-        signal: ac.signal,
-        cache: 'no-store',
-      });
-
-      if (!res.ok || !res.body) {
-        throw new Error(`HTTP ${res.status}`);
-      }
-
-      reader = res.body.getReader();
-      while (
-        this.status === 'running' &&
-        this.streamingActive &&
-        generation === this.streamGeneration
-      ) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        if (value) {
-          const len = value.byteLength;
-          this.bytesDownTick += len;
-          this.bytesDownTotal += len;
-        }
-      }
-    } catch {
-      // Stream interrupted or error
-    } finally {
-      if (reader) {
-        try {
-          await reader.cancel();
-        } catch {}
-      }
-      // Loop stream immediately to keep the link saturated without artificial pause
-      if (
-        this.status === 'running' &&
-        this.streamingActive &&
-        generation === this.streamGeneration
-      ) {
-        setTimeout(() => this.spawnDownloadWorker(streamIndex, generation), 0);
-      }
-    }
-  }
-
   startProbing() {
     clearInterval(this.probeTimer);
-    this.probeTimer = setInterval(() => this.sendProbe(), this.config.probeIntervalMs);
-  }
-
-  async sendProbe() {
-    if (this.status !== 'running' || this.probeInFlight) return;
-    this.probeInFlight = true;
-    const ac = new AbortController();
-    const timeoutId = setTimeout(() => ac.abort(), this.config.probeTimeoutMs);
-    const start = performance.now();
-
-    try {
-      const probeUrl = `${this.config.probeEndpoint}&probeBust=${Date.now()}_${Math.random()}`;
-      const res = await fetch(probeUrl, {
-        signal: ac.signal,
-        cache: 'no-store',
-        mode: 'cors',
-       });
-      clearTimeout(timeoutId);
-
-      // Free HTTP/2 stream and socket immediately to avoid socket/stream exhaustion
-      if (res.body) {
-        try {
-          await res.body.cancel();
-        } catch {}
-      }
-
-      const rtt = Math.max(1, performance.now() - start);
-      this.recordProbe(rtt, res.ok);
-    } catch {
-      clearTimeout(timeoutId);
-      this.recordProbe(this.config.probeTimeoutMs, false);
-    } finally {
-      this.probeInFlight = false;
-    }
+    this.probeTimer = setInterval(() => sendLatencyProbe(this), this.config.probeIntervalMs);
   }
 
   recordProbe(rtt, ok) {
@@ -423,6 +370,26 @@ export class BenchmarkEngine {
 
       // Update Burst vs Sustained Analysis
       this.analyzeBurstVsSustained();
+
+      // Check for notable bufferbloat spike (> 180 ms)
+      if (pingMs > 180 && this.elapsedSeconds - this.lastSpikeLogTime > 30) {
+        this.lastSpikeLogTime = this.elapsedSeconds;
+        this.logEvent(
+          'warn',
+          `Bufferbloat alert: loaded latency spiked to ${pingMs.toFixed(1)} ms under throughput load.`,
+          { alert: 'bufferbloat', pingMs: Number(pingMs.toFixed(1)), jitterMs: Number(jitterMs.toFixed(1)) }
+        );
+      }
+
+      // Check for probe packet loss (> 5%)
+      if (lossPct >= 5 && this.elapsedSeconds - this.lastLossLogTime > 35) {
+        this.lastLossLogTime = this.elapsedSeconds;
+        this.logEvent(
+          'warn',
+          `Network loss alert: probe loss elevated to ${lossPct.toFixed(1)}% across the rolling probe window.`,
+          { alert: 'loss', lossPct: Number(lossPct.toFixed(1)) }
+        );
+      }
     }
 
     // Interval mode alternates a 10 s measurement burst with a 20 s rest.
@@ -444,7 +411,8 @@ export class BenchmarkEngine {
       if (usedMB >= this.dataCapMB) {
         this.logEvent(
           'warn',
-          `Data cap of ${this.dataCapMB} MB reached. Test stopped automatically.`,
+          `Data cap reached: ${formatBytes(this.bytesDownTotal)} consumed (limit: ${this.dataCapMB} MB). Test stopped automatically.`,
+          { limit: `${this.dataCapMB} MB`, consumed: formatBytes(this.bytesDownTotal) }
         );
         this.stop();
         return;
@@ -460,7 +428,10 @@ export class BenchmarkEngine {
     this.sustainedSpeed = next.sustainedSpeed;
     this.stepDownReport = next.stepDownReport;
     if (logDrop && next.stepDownEvent) {
-      this.logEvent('drop', next.stepDownEvent);
+      this.logEvent('drop', next.stepDownEvent, {
+        burst: this.burstSpeed,
+        sustained: this.sustainedSpeed,
+      });
     }
   }
 
@@ -473,11 +444,11 @@ export class BenchmarkEngine {
   }
 
   exportJSON() {
-    return buildBenchmarkJson(this);
+    return buildBenchmarkJson(this.getSnapshot());
   }
 
   saveToStorage() {
-    saveSession(this);
+    return saveSession(this);
   }
 
   hasStoredSession() {
@@ -485,22 +456,18 @@ export class BenchmarkEngine {
   }
 
   loadFromStorage() {
-    const data = loadSession();
-    if (!data) return false;
-    this.samples = data.samples || [];
-    this.events = data.events || [];
-    this.elapsedSeconds = data.elapsedSeconds || 0;
-    this.bytesDownTotal = data.bytesDownTotal || 0;
-    this.testConditions = data.testConditions || this.testConditions;
-    this.mode = data.mode || this.mode;
-    this.dataCapMB = data.dataCapMB || 0;
-    this.bytesDownTick = 0;
-    this.bytesUpTick = 0;
-    this.probeHistory = [];
-    this.burstSpeed = null;
-    this.sustainedSpeed = null;
-    this.stepDownReport = null;
-    // Rebuild the comparison from stored samples without appending a duplicate event.
+    const restored = loadSession();
+    if (!restored) return false;
+
+    this.samples = restored.samples || [];
+    this.events = restored.events || [];
+    this.bytesDownTotal = restored.bytesDownTotal || 0;
+    this.elapsedSeconds = restored.elapsedSeconds || 0;
+    this.mode = restored.mode || this.config.defaultMode;
+    this.dataCapMB =
+      restored.dataCapMB !== undefined ? restored.dataCapMB : this.config.defaultDataCapMB;
+    this.testConditions = restored.testConditions || this.testConditions;
+
     this.analyzeBurstVsSustained(false);
     this.emit();
     return true;

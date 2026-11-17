@@ -13,6 +13,14 @@ export const CHART_METRICS = [
     decimals: 1,
   },
   {
+    id: 'upload',
+    key: 'upMbps',
+    label: 'Upload',
+    unit: 'Mbps',
+    cssVar: '--bench-upload',
+    decimals: 1,
+  },
+  {
     id: 'ping',
     key: 'pingMs',
     label: 'Loaded ping',
@@ -40,6 +48,16 @@ export const CHART_METRICS = [
 ];
 
 export const VITAL_METRICS = [
+  {
+    key: 'upload',
+    sampleKey: 'upMbps',
+    label: 'Upload throughput',
+    unit: 'Mbps',
+    cssVar: '--bench-upload',
+    icon: 'arrowUp',
+    grade: 'speed',
+    floor: 5,
+  },
   {
     key: 'ping',
     sampleKey: 'pingMs',
@@ -87,6 +105,13 @@ export function formatRate(value) {
 export function getGrade(kind, value, hasData) {
   if (!hasData || value === null || value === undefined) {
     return { label: 'No data', tone: 'neutral' };
+  }
+
+  if (kind === 'speed') {
+    if (value < 5) return { label: 'Low', tone: 'warn' };
+    if (value < 25) return { label: 'Fair', tone: 'warn' };
+    if (value < 100) return { label: 'Good', tone: 'good' };
+    return { label: 'Fast', tone: 'good' };
   }
 
   if (kind === 'latency') {

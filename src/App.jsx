@@ -10,6 +10,8 @@ import {
   SplitHorizontal,
   MapPin,
   Question,
+  BookOpen,
+  TreeStructure,
 } from "@phosphor-icons/react";
 import { ThemeToggle } from "./components/ThemeToggle";
 import { MyIpWidget } from "./components/MyIpWidget";
@@ -19,10 +21,12 @@ import { MembershipTool } from "./components/tools/MembershipTool";
 import { MasksTool } from "./components/tools/MasksTool";
 import { IpInfoTool } from "./components/tools/IpInfoTool";
 import { SplitTool } from "./components/tools/SplitTool";
+import { VlsmTool } from "./components/tools/VlsmTool";
 import { LocateTool } from "./components/tools/LocateTool";
 import { useMyIp } from "./hooks/useMyIp";
 import { AboutTool } from "./components/tools/AboutTool";
 import { BenchmarkTool } from "./components/tools/BenchmarkTool";
+import { DocsTool } from "./components/tools/DocsTool";
 import "./styles/tools.css";
 
 const TOOLS = [
@@ -75,12 +79,28 @@ const TOOLS = [
     desc: "Carve a parent CIDR into equal child subnets.",
   },
   {
+    id: "vlsm",
+    label: "VLSM",
+    icon: TreeStructure,
+    eyebrow: "IPv4 design",
+    chip: "100% offline",
+    desc: "Variable Length Subnet Masking: allocate subnets from host requirements.",
+  },
+  {
     id: "locate",
     label: "Locate",
     icon: MapPin,
     eyebrow: "Geo lookup",
     chip: "public geo APIs",
     desc: "See your public IP on the map, or look up any address (no API key).",
+  },
+  {
+    id: "docs",
+    label: "Docs",
+    icon: BookOpen,
+    eyebrow: "Documentation",
+    chip: "guides & specs",
+    desc: "SpeedBench guides, network arithmetic references, and architecture.",
   },
   {
     id: "about",
@@ -97,7 +117,7 @@ function getInitialTool() {
     const param = new URLSearchParams(window.location.search).get("tool");
     if (TOOLS.some((t) => t.id === param)) return param;
   } catch {}
-  return "subnet";
+  return "benchmark";
 }
 
 export function App() {
@@ -110,14 +130,25 @@ export function App() {
   useEffect(() => {
     try {
       const url = new URL(window.location.href);
-      if (activeTool === "subnet") {
-        url.searchParams.delete("tool");
-      } else {
-        url.searchParams.set("tool", activeTool);
-      }
+      url.searchParams.set("tool", activeTool);
       window.history.replaceState({}, "", url);
     } catch {}
   }, [activeTool]);
+
+  useEffect(() => {
+    const onPopState = () => {
+      try {
+        const param = new URLSearchParams(window.location.search).get("tool");
+        if (TOOLS.some((t) => t.id === param)) {
+          setActiveTool(param);
+        } else {
+          setActiveTool("benchmark");
+        }
+      } catch {}
+    };
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, []);
 
   const currentToolObj = TOOLS.find((t) => t.id === activeTool) || TOOLS[0];
   const detectedIp = myIpState.status === "ready" ? myIpState.data.ip : null;
@@ -228,6 +259,7 @@ export function App() {
             {activeTool === "mask" && <MasksTool />}
             {activeTool === "info" && <IpInfoTool myIp={detectedIp} />}
             {activeTool === "split" && <SplitTool />}
+            {activeTool === "vlsm" && <VlsmTool />}
             {activeTool === "locate" && (
               <LocateTool
                 key={refreshKey}
@@ -235,6 +267,7 @@ export function App() {
                 myIp={detectedIp}
               />
             )}
+            {activeTool === "docs" && <DocsTool />}
             {activeTool === "about" && <AboutTool />}
           </motion.div>
         </main>

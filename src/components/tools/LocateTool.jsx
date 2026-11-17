@@ -6,6 +6,7 @@ import { Button } from "../ui/Button";
 import { DataList } from "../ui/DataList";
 import { ResultBox } from "../ui/ResultBox";
 import { lookupIpLocation, timeZoneValue, richIsp } from "../../utils/geo-api";
+import { resolveHostname } from "../../utils/dns-resolver";
 import { LeafletMap } from "./LeafletMap";
 
 export function LocateTool({ presetIp, myIp }) {
@@ -16,11 +17,17 @@ export function LocateTool({ presetIp, myIp }) {
   const [result, setResult] = useState(null);
 
   const doLookup = useCallback(async (ipToSearch) => {
-    const target = (ipToSearch || "").trim();
+    let target = (ipToSearch || "").trim();
     if (!target) return;
     setLoading(true);
     setError(null);
     try {
+      if (!/^(\d{1,3}\.){3}\d{1,3}$/.test(target) && !target.includes(":")) {
+        const doh = await resolveHostname(target);
+        if (!doh.ok) throw new Error(doh.error);
+        target = doh.ip;
+        setIpInput(doh.ip);
+      }
       const data = await lookupIpLocation(target);
       setResult(data);
     } catch (err) {
@@ -55,16 +62,16 @@ export function LocateTool({ presetIp, myIp }) {
         <Input
           id="locate-ip"
           name="ip"
-          label="IPv4 address to locate"
+          label="IPv4 address or Domain to locate"
           value={ipInput}
           onChange={(e) => setIpInput(e.target.value)}
-          placeholder="Enter IP (e.g. 1.1.1.1)…"
+          placeholder="Enter IP or domain (e.g. 1.1.1.1 or cloudflare.com)…"
         />
         <Button type="submit" variant="primary" disabled={loading}>
           {loading ? "Locating…" : "Locate"}
         </Button>
         <p className="text-xs text-(--muted) sm:col-span-2 -mt-2">
-          Uses public free geolocation providers
+          Supports IPv4 or domain name (auto-resolved via DoH)
         </p>
       </form>
 

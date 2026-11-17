@@ -9,11 +9,13 @@ export function buildSnapshot(engine) {
   const n = samples.length;
 
   let downSum = 0, downMin = Infinity, downMax = -Infinity;
+  let upSum = 0, upMin = Infinity, upMax = -Infinity;
   let pingSum = 0, pingMin = Infinity, pingMax = -Infinity, pingCount = 0;
   let jitterSum = 0, jitterMin = Infinity, jitterMax = -Infinity;
   let lossSum = 0, lossMin = Infinity, lossMax = -Infinity;
 
   const downVals = new Float32Array(n);
+  const upVals = new Float32Array(n);
   const jitterVals = new Float32Array(n);
   const lossVals = new Float32Array(n);
   const pingVals = [];
@@ -21,6 +23,7 @@ export function buildSnapshot(engine) {
   for (let i = 0; i < n; i++) {
     const s = samples[i];
     const d = s.downMbps;
+    const u = s.upMbps || 0;
     const p = s.pingMs;
     const j = s.jitterMs;
     const l = s.lossPct;
@@ -29,6 +32,11 @@ export function buildSnapshot(engine) {
     if (d < downMin) downMin = d;
     if (d > downMax) downMax = d;
     downVals[i] = d;
+
+    upSum += u;
+    if (u < upMin) upMin = u;
+    if (u > upMax) upMax = u;
+    upVals[i] = u;
 
     if (p > 0) {
       pingSum += p;
@@ -82,6 +90,13 @@ export function buildSnapshot(engine) {
         min: Number(downMin.toFixed(1)),
         max: Number(downMax.toFixed(1)),
         p95: Number(calcPercentile(downVals, 95).toFixed(1)),
+      },
+      upload: n === 0 ? { cur: 0, avg: 0, min: 0, max: 0, p95: 0 } : {
+        cur: Number((last.upMbps || 0).toFixed(1)),
+        avg: Number((upSum / n).toFixed(1)),
+        min: Number((upMin === Infinity ? 0 : upMin).toFixed(1)),
+        max: Number((upMax === -Infinity ? 0 : upMax).toFixed(1)),
+        p95: Number(calcPercentile(upVals, 95).toFixed(1)),
       },
       ping: pingCount === 0 ? { cur: 0, avg: 0, min: 0, max: 0, p95: 0 } : {
         cur: Number(last.pingMs.toFixed(1)),

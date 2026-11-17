@@ -1,5 +1,5 @@
 import React from 'react';
-import { ChartLine, Drop, Pulse, WaveSine } from '@phosphor-icons/react';
+import { ChartLine, Drop, Pulse, WaveSine, ArrowUp } from '@phosphor-icons/react';
 import { VITAL_METRICS, formatValue, getGrade } from '../../../utils/benchmark-view';
 import { Sparkline } from './Sparkline';
 
@@ -7,6 +7,7 @@ const ICONS = {
   pulse: Pulse,
   wave: WaveSine,
   drop: Drop,
+  arrowUp: ArrowUp,
 };
 
 function heroState(snapshot) {

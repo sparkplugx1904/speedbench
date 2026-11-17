@@ -7,6 +7,7 @@
   --bench-radius-sm: 0;
   --bench-gap: clamp(14px, 1.35vw, 20px);
   --bench-download: oklch(52% 0.14 235);
+  --bench-upload: oklch(55% 0.17 290);
   --bench-ping: oklch(50% 0.12 155);
   --bench-jitter: oklch(58% 0.14 65);
   --bench-loss: oklch(55% 0.18 20);
@@ -35,6 +36,7 @@
 
 html[data-theme='dark'] .bench {
   --bench-download: oklch(76% 0.14 235);
+  --bench-upload: oklch(78% 0.15 290);
   --bench-ping: oklch(78% 0.14 155);
   --bench-jitter: oklch(82% 0.14 80);
   --bench-loss: oklch(72% 0.16 20);
@@ -1130,10 +1132,10 @@ html[data-theme='dark'] .bench {
 
 .bench-event {
   display: grid;
-  grid-template-columns: 8px 58px minmax(0, 1fr);
-  gap: 9px;
+  grid-template-columns: 8px 64px minmax(0, 1fr);
+  gap: 10px;
   align-items: start;
-  padding: 9px 2px;
+  padding: 10px 2px;
   border-bottom: 1px solid var(--bench-line-soft);
   font-size: 0.74rem;
 }
@@ -1159,19 +1161,41 @@ html[data-theme='dark'] .bench {
   background: var(--bench-bad);
 }
 
+.bench-event-time-col {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
 .bench-event-time {
   padding-top: 1px;
   color: var(--muted);
   font-family: var(--font-mono);
-  font-size: 0.66rem;
+  font-size: 0.68rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+}
+
+.bench-event-wallclock {
+  font-family: var(--font-mono);
+  font-size: 0.58rem;
+  color: var(--muted);
+  opacity: 0.7;
   font-variant-numeric: tabular-nums;
 }
 
 .bench-event-body {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
   min-width: 0;
+}
+
+.bench-event-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
 }
 
 .bench-event-type {
@@ -1203,6 +1227,43 @@ html[data-theme='dark'] .bench {
   color: var(--ink);
   line-height: 1.45;
   overflow-wrap: anywhere;
+}
+
+.bench-event-params {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 2px;
+}
+
+.bench-param-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 5px;
+  border: 1px solid var(--bench-line-soft);
+  background: var(--bench-wash);
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  line-height: 1.4;
+}
+
+.bench-param-chip--warn {
+  border-color: color-mix(in oklab, var(--bench-warn) 35%, transparent);
+  background: color-mix(in oklab, var(--bench-warn) 8%, transparent);
+  color: var(--bench-warn);
+}
+
+.bench-param-key {
+  color: var(--muted);
+  font-size: 0.58rem;
+  text-transform: uppercase;
+  font-weight: 500;
+}
+
+.bench-param-val {
+  font-weight: 600;
 }
 
 /* -------------------------------------------------------------------- export */
